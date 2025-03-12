@@ -1,0 +1,23 @@
+// Create a new canvas
+TCanvas *c1 = new TCanvas("c1", "Histogram", 800, 600);
+// Create the histogram
+TH1F* h = new TH1F("h", "Pulse Histogram", 100, 0, 4000);
+// Draw the histogram from the tree
+tree->Draw("pulseH[0] >> h(100,0,4000)", "", "HIST");
+// Set axis titles after drawing the histogram
+h->GetXaxis()->SetTitle("ADC");
+h->GetYaxis()->SetTitle("Entries / 40 ADC");
+// Adjust title positions
+h->GetYaxis()->SetTitleOffset(0.9);  // Adjust the Y-axis title position
+h->GetXaxis()->SetTitleOffset(1.0);  // Adjust the X-axis title position
+// Adjust margins: (left, right, bottom, top)
+gPad->SetMargin(0.12, 0.05, 0.15, 0.1);
+// Create and add a custom plot title
+TLatex title;
+title.SetTextSize(0.05);  // Set the text size for the title
+title.SetTextAlign(22);   // Center the title (both horizontal and vertical)
+title.DrawTextNDC(0.5, 0.97, "GOOD Events");  // Draw the title at the top center of the canvas
+// Force a redraw of the canvas and histogram
+gPad->Modified();
+gPad->Update();
+
