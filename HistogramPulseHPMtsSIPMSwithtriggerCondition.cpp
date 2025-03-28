@@ -1,3 +1,4 @@
+//This gives the histogram of pulseH (of all channels) with specific trigger conditions.
 #include <iostream>
 #include <TFile.h>
 #include <TTree.h>
