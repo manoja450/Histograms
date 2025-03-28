@@ -8,10 +8,30 @@
 #include <cmath>
 #include "TLatex.h"
 #include <map>
+#include <TSystem.h>
+#include <sys/stat.h>
 
 using namespace std;
 
 void processLowLightEvents(const char *fileName) {
+    // Create output directory
+    const char* outDir = "pulseH_plots";
+    
+    // Check if directory exists, if not create it
+    struct stat info;
+    if (stat(outDir, &info) != 0) {
+        // Directory doesn't exist, try to create it
+        if (gSystem->mkdir(outDir, kTRUE) != 0) {
+            cerr << "Error: Could not create directory " << outDir << endl;
+            return;
+        }
+        cout << "Created directory: " << outDir << endl;
+    } 
+    else if (!(info.st_mode & S_IFDIR)) {
+        cerr << "Error: " << outDir << " exists but is not a directory" << endl;
+        return;
+    }
+
     TFile *file = TFile::Open(fileName);
     if (!file || file->IsZombie()) {
         cerr << "Error opening file: " << fileName << endl;
@@ -79,9 +99,9 @@ void processLowLightEvents(const char *fileName) {
         
         // Adjust pad margins before drawing
         gPad->SetLeftMargin(0.15);
-        gPad->SetRightMargin(0.05);
+        gPad->SetRightMargin(0.12);
         gPad->SetBottomMargin(0.15);
-        gPad->SetTopMargin(0.1);
+        gPad->SetTopMargin(0.12);
 
         histPMT[i]->Draw();
         
@@ -90,7 +110,7 @@ void processLowLightEvents(const char *fileName) {
         histPMT[i]->GetYaxis()->SetTitleSize(0.06);
         histPMT[i]->GetYaxis()->SetTitleOffset(1.2);
 
-        individualCanvas->SaveAs(Form("PMT%d_pulseH.png", i + 1));
+        individualCanvas->SaveAs(Form("%s/PMT%d_pulseH.png", outDir, i + 1));
     }
 
     // Save individual SiPM plots
@@ -99,9 +119,9 @@ void processLowLightEvents(const char *fileName) {
         
         // Adjust pad margins before drawing
         gPad->SetLeftMargin(0.15);
-        gPad->SetRightMargin(0.05);
+        gPad->SetRightMargin(0.12);
         gPad->SetBottomMargin(0.15);
-        gPad->SetTopMargin(0.1);
+        gPad->SetTopMargin(0.12);
 
         histSiPM[i]->Draw();
         
@@ -110,12 +130,12 @@ void processLowLightEvents(const char *fileName) {
         histSiPM[i]->GetYaxis()->SetTitleSize(0.06);
         histSiPM[i]->GetYaxis()->SetTitleOffset(1.2);
 
-        individualCanvas->SaveAs(Form("SiPM%d_pulseH.png", i + 1));
+        individualCanvas->SaveAs(Form("%s/SiPM%d_pulseH.png", outDir, i + 1));
     }
 
     // Create master canvas with 6x5 layout
-    TCanvas *masterCanvas = new TCanvas("MasterCanvas", "Combined PMT and SiPM Pulse Height Distributions", 3600, 3000);
-    masterCanvas->Divide(5, 6);
+    TCanvas *masterCanvas = new TCanvas("MasterCanvas", "Combined PMT and SiPM Pulse Height Distributions", 3600,3000);
+    masterCanvas->Divide(5, 6, 0.005, 0.005); // Added small margins between pads
 
     // Define the custom layout
     int layout[6][5] = {
@@ -140,7 +160,12 @@ void processLowLightEvents(const char *fileName) {
             masterCanvas->cd(padNum);
             
             int channel = layout[row][col];
-            if (channel == -1) continue;
+            if (channel == -1) {
+                gPad->SetFillColor(0);
+                gPad->Modified();
+                gPad->Update();
+                continue;
+            }
 
             TH1F *hist = nullptr;
             TString title;
@@ -178,9 +203,9 @@ void processLowLightEvents(const char *fileName) {
 
             // Adjust pad margins
             gPad->SetLeftMargin(0.15);
-            gPad->SetRightMargin(0.05);
+            gPad->SetRightMargin(0.10);
             gPad->SetBottomMargin(0.12);
-            gPad->SetTopMargin(0.10);
+            gPad->SetTopMargin(0.12);
 
             hist->Draw();
 
@@ -196,21 +221,22 @@ void processLowLightEvents(const char *fileName) {
     // Add axis labels textbox
     masterCanvas->cd();
     TLatex *textbox = new TLatex();
-    textbox->SetTextSize(0.02);
+    textbox->SetTextSize(0.05);
     textbox->SetTextAlign(15);
     textbox->SetNDC(true);
-    textbox->DrawLatex(0.01, 0.10, "X axis: pulseH(ADC)");
-    textbox->DrawLatex(0.01, 0.08, "Y axis: Events");
+    textbox->DrawLatex(0.01, 0.11, "X axis: pulseH(ADC)");
+    textbox->DrawLatex(0.01, 0.07, "Y axis: Events");
 
     // Save and clean up
-    masterCanvas->SaveAs("Combined_PMT_SiPM_PulseHeight_Distributions.png");
+    masterCanvas->SaveAs(Form("%s/Combined_PMT_SiPM_PulseHeight_Distributions.png", outDir));
     for (int i = 0; i < 12; i++) delete histPMT[i];
     for (int i = 0; i < 10; i++) delete histSiPM[i];
     delete individualCanvas;
     delete masterCanvas;
     file->Close();
 
-    cout << "Individual PMT and SiPM pulse height plots saved as PMT1_pulseH.png, PMT2_pulseH.png, ..., SiPM1_pulseH.png, etc." << endl;
+    cout << "All plots saved in directory: " << outDir << endl;
+    cout << "Individual PMT and SiPM pulse height plots saved as PMT1_pulseH.png, PMT2_pulseH.png, etc." << endl;
     cout << "Combined pulse height histogram saved as Combined_PMT_SiPM_PulseHeight_Distributions.png" << endl;
 }
 
