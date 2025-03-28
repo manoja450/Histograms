@@ -1,3 +1,4 @@
+//This code gives the Histogram of the area ( all channels) with specific trigger conditions.
 #include <iostream>
 #include <TFile.h>
 #include <TTree.h>
