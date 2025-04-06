@@ -1,3 +1,4 @@
+//Pmts non log,SIPMs log plot
 #include <iostream>
 #include <TFile.h>
 #include <TTree.h>
@@ -23,7 +24,6 @@ void processLowLightEvents(const char *fileName) {
     // Check if directory exists, if not create it
     struct stat info;
     if (stat(outDir, &info) != 0) {
-        // Directory doesn't exist, try to create it
         if (gSystem->mkdir(outDir, kTRUE) != 0) {
             cerr << "Error: Could not create directory " << outDir << endl;
             return;
@@ -66,7 +66,7 @@ void processLowLightEvents(const char *fileName) {
     double pmtThresholds[12] = {5000,4000,3000,4000,5000,6000,7000,8000,9000,5000,8000,7000};
     double sipmThresholds[10] = {800,1000,1100,1200,550,600,650,450,600,650};
 
-    // Create histograms for PMTs and SiPMs with area
+    // Create histograms
     TH1F *histPMT[12];         // Full histograms
     TH1F *histPMT_below[12];   // Below threshold
     TH1F *histSiPM[10];        // Full histograms
@@ -74,15 +74,14 @@ void processLowLightEvents(const char *fileName) {
     
     for (int i = 0; i < 12; i++) {
         histPMT[i] = new TH1F(Form("PMT%d", i + 1), 
-                              Form("PMT%d;Area;Events/500 ADC", i + 1),
-                              100, 0, 50000);
+                             Form("PMT%d;Area;Events/500 ADC", i + 1),
+                             100, 0, 50000);
         histPMT[i]->SetLineColor(kRed);
-        histPMT[i]->SetMinimum(0.1);
-        histPMT[i]->SetMaximum(1e6);
+        histPMT[i]->SetMinimum(0); // Linear scale starts at 0
         
-        histPMT_below[i] = new TH1F(Form("PMT%d_below", i + 1), 
-                                   Form("PMT%d (below threshold);Area;Events/500 ADC", i + 1),
-                                   100, -0, 50000);
+        histPMT_below[i] = new TH1F(Form("PMT%d", i + 1), 
+                                   Form("PMT%d;Area;Events/500 ADC", i + 1),
+                                   100, 0, 50000);
         histPMT_below[i]->SetLineColor(kBlue);
         histPMT_below[i]->SetFillColor(kBlue);
         histPMT_below[i]->SetFillStyle(3001);
@@ -93,11 +92,11 @@ void processLowLightEvents(const char *fileName) {
                               Form("SiPM%d;Area;Events/30 ADC", i + 1),
                               100, 0, 3000);
         histSiPM[i]->SetLineColor(kRed);
-        histSiPM[i]->SetMinimum(0.1);
-        histSiPM[i]->SetMaximum(1e6);
+        histSiPM[i]->SetMinimum(0.1); // For log scale
+        histSiPM[i]->SetMaximum(1e6); // For log scale
         
-        histSiPM_below[i] = new TH1F(Form("SiPM%d_below", i + 1), 
-                                    Form("SiPM%d (below threshold);Area;Events/30 ADC", i + 1),
+        histSiPM_below[i] = new TH1F(Form("SiPM%d", i + 1), 
+                                    Form("SiPM%d ;Area;Events/30 ADC", i + 1),
                                     100, 0, 3000);
         histSiPM_below[i]->SetLineColor(kBlue);
         histSiPM_below[i]->SetFillColor(kBlue);
@@ -108,7 +107,6 @@ void processLowLightEvents(const char *fileName) {
     for (Long64_t entry = 0; entry < nEntries; entry++) {
         tree->GetEntry(entry);
         if (triggerBits == 34) {
-            // Fill PMT histograms
             for (int pmt = 0; pmt < 12; pmt++) {
                 int adcIdx = pmtChannelMap[pmt];
                 double a = area[adcIdx];
@@ -117,7 +115,6 @@ void processLowLightEvents(const char *fileName) {
                     histPMT_below[pmt]->Fill(a);
                 }
             }
-            // Fill SiPM histograms
             for (int sipm = 0; sipm < 10; sipm++) {
                 int adcIdx = sipmChannelMap[sipm];
                 double a = area[adcIdx];
@@ -129,46 +126,41 @@ void processLowLightEvents(const char *fileName) {
         }
     }
 
-    // Save individual PMT plots
+    // Save individual PMT plots (linear scale)
     TCanvas *individualCanvas = new TCanvas("IndividualCanvas", "Individual Plots", 800, 600);
     for (int i = 0; i < 12; i++) {
         individualCanvas->Clear();
-        
         gPad->SetLeftMargin(0.15);
         gPad->SetRightMargin(0.12);
         gPad->SetBottomMargin(0.15);
         gPad->SetTopMargin(0.12);
         
-        gPad->SetLogy();
+        // Linear scale for PMTs
+        gPad->SetLogy(0);
         
-        // Draw full histogram first
-        histPMT[i]->Draw();
-        // Then draw below threshold histogram on top
-        histPMT_below[i]->Draw("same");
-    
+        // Draw below threshold first for proper scaling
+        histPMT_below[i]->Draw();
+        histPMT[i]->Draw("same");
+        
         
         histPMT[i]->GetXaxis()->SetTitleSize(0.06);
         histPMT[i]->GetYaxis()->SetTitleSize(0.06);
         histPMT[i]->GetYaxis()->SetTitleOffset(1.2);
 
-        individualCanvas->SaveAs(Form("%s/PMT%d_area_log.png", outDir, i + 1));
-
+        individualCanvas->SaveAs(Form("%s/PMT%d_area_linear.png", outDir, i + 1));
+    
     }
 
-    // Save individual SiPM plots
+    // Save individual SiPM plots (log scale)
     for (int i = 0; i < 10; i++) {
         individualCanvas->Clear();
-        
         gPad->SetLeftMargin(0.15);
         gPad->SetRightMargin(0.12);
         gPad->SetBottomMargin(0.15);
         gPad->SetTopMargin(0.12);
         
         gPad->SetLogy();
-        
-        // Draw full histogram first
         histSiPM[i]->Draw();
-        // Then draw below threshold histogram on top
         histSiPM_below[i]->Draw("same");
         
         
@@ -177,13 +169,13 @@ void processLowLightEvents(const char *fileName) {
         histSiPM[i]->GetYaxis()->SetTitleOffset(1.2);
 
         individualCanvas->SaveAs(Form("%s/SiPM%d_area_log.png", outDir, i + 1));
+
     }
 
-    // Create master canvas with 6x5 layout
+    // Create master canvas
     TCanvas *masterCanvas = new TCanvas("MasterCanvas", "Combined PMT and SiPM Area Distributions", 3600, 3000);
     masterCanvas->Divide(5, 6, 0.005, 0.005);
 
-    // Define the custom layout
     int layout[6][5] = {
         {-1,  -1,  20,  21, -1},
         {16,  9,   3,   7,  12},
@@ -193,17 +185,14 @@ void processLowLightEvents(const char *fileName) {
         {-1,  -1,  14,  18, -1}
     };
 
-    // Reverse map for PMT channels (channel -> pmtIndex)
     map<int, int> pmtReverseMap;
     for (int i = 0; i < 12; i++) {
         pmtReverseMap[pmtChannelMap[i]] = i;
     }
 
-    // Configure scientific notation
     TGaxis::SetMaxDigits(3);
     gStyle->SetPaintTextFormat("4.1e");
 
-    // Populate each pad in the master canvas
     for (int row = 0; row < 6; row++) {
         for (int col = 0; col < 5; col++) {
             int padNum = row * 5 + col + 1;
@@ -219,36 +208,30 @@ void processLowLightEvents(const char *fileName) {
 
             TH1F *hist = nullptr;
             TH1F *hist_below = nullptr;
-            double threshold = 0;
             TString title;
 
             if (channel >= 0 && channel < 12) { // PMT
                 auto it = pmtReverseMap.find(channel);
-                if (it == pmtReverseMap.end()) {
-                    cerr << "PMT channel " << channel << " not mapped!" << endl;
-                    continue;
-                }
+                if (it == pmtReverseMap.end()) continue;
                 int pmtIdx = it->second;
                 hist = histPMT[pmtIdx];
                 hist_below = histPMT_below[pmtIdx];
-                threshold = pmtThresholds[pmtIdx];
                 title = Form("PMT%d", pmtIdx + 1);
-            } else if (channel >= 12 && channel <= 21) { // SiPM
+                gPad->SetLogy(0);
+                hist_below->Draw();
+                hist->Draw("same");
+            } 
+            else if (channel >= 12 && channel <= 21) { // SiPM
                 int sipmIdx = channel - 12;
-                if (sipmIdx < 0 || sipmIdx >= 10) {
-                    cerr << "SiPM channel " << channel << " invalid!" << endl;
-                    continue;
-                }
+                if (sipmIdx < 0 || sipmIdx >= 10) continue;
                 hist = histSiPM[sipmIdx];
                 hist_below = histSiPM_below[sipmIdx];
-                threshold = sipmThresholds[sipmIdx];
                 title = Form("SiPM%d", sipmIdx + 1);
-            } else {
-                cerr << "Invalid channel: " << channel << endl;
-                continue;
+                gPad->SetLogy();
+                hist->Draw();
+                hist_below->Draw("same");
             }
 
-            // Configure histogram
             hist->SetTitle("");
             hist->GetXaxis()->SetTitleSize(0.05);
             hist->GetYaxis()->SetTitleSize(0.07);
@@ -259,23 +242,11 @@ void processLowLightEvents(const char *fileName) {
             hist->GetXaxis()->SetNdivisions(505);
             hist->GetYaxis()->SetNdivisions(505);
 
-            // Adjust pad margins
             gPad->SetLeftMargin(0.15);
             gPad->SetRightMargin(0.10);
             gPad->SetBottomMargin(0.12);
             gPad->SetTopMargin(0.12);
-            
-            // Set log scale and draw
-            gPad->SetLogy();
-            hist->Draw();
-            hist_below->Draw("same");
 
-            // Force scientific notation
-            gPad->Update();
-            hist->GetXaxis()->SetMoreLogLabels();
-            hist->GetYaxis()->SetMoreLogLabels();
-
-            // Add title
             TLatex *latex = new TLatex();
             latex->SetTextSize(0.12);
             latex->SetTextAlign(22);
@@ -284,7 +255,6 @@ void processLowLightEvents(const char *fileName) {
         }
     }
 
-    // Add axis labels textbox
     masterCanvas->cd();
     TLatex *textbox = new TLatex();
     textbox->SetTextSize(0.05);
@@ -293,8 +263,9 @@ void processLowLightEvents(const char *fileName) {
     textbox->DrawLatex(0.01, 0.11, "X axis: Area");
     textbox->DrawLatex(0.01, 0.07, "Y axis: Events");
 
-    // Save and clean up
-    masterCanvas->SaveAs(Form("%s/Combined_PMT_SiPM_Area_Distributions_log.png", outDir));
+    masterCanvas->SaveAs(Form("%s/Combined_PMT_SiPM_Area_Distributions.png", outDir));
+    
+    // Clean up
     for (int i = 0; i < 12; i++) {
         delete histPMT[i];
         delete histPMT_below[i];
@@ -308,8 +279,6 @@ void processLowLightEvents(const char *fileName) {
     file->Close();
 
     cout << "All plots saved in directory: " << outDir << endl;
-    cout << "Individual PMT and SiPM area plots (log scale) saved as PMT1_area_log.png, etc." << endl;
-    cout << "Combined area histogram (log scale) saved as Combined_PMT_SiPM_Area_Distributions_log.png" << endl;
 }
 
 int main(int argc, char* argv[]) {
