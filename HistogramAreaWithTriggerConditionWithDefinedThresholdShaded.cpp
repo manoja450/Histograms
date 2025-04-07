@@ -63,8 +63,8 @@ void processLowLightEvents(const char *fileName) {
     int sipmChannelMap[10] = {12, 13, 14, 15, 16, 17, 18, 19, 20, 21};
 
     // Thresholds for PMTs and SiPMs
-    double pmtThresholds[12] = {5000,4000,3000,4000,5000,6000,7000,8000,9000,5000,8000,7000};
-    double sipmThresholds[10] = {800,1000,1100,1200,550,600,650,450,600,650};
+    double pmtThresholds[12] = {4800,6000,5000,6000,6000,4700,4500,3000,2000,5000,4500,4800};
+    double sipmThresholds[10] = {800,800,1100,1200,550,600,650,450,600,650};
 
     // Create histograms
     TH1F *histPMT[12];         // Full histograms
@@ -127,7 +127,7 @@ void processLowLightEvents(const char *fileName) {
     }
 
     // Save individual PMT plots (linear scale)
-    TCanvas *individualCanvas = new TCanvas("IndividualCanvas", "Individual Plots", 800, 600);
+    TCanvas *individualCanvas = new TCanvas("IndividualCanvas", "Individual Plots", 1200, 900);
     for (int i = 0; i < 12; i++) {
         individualCanvas->Clear();
         gPad->SetLeftMargin(0.15);
