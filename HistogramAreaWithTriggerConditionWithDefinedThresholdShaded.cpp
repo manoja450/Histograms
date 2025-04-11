@@ -20,7 +20,6 @@ using namespace std;
 void processLowLightEvents(const char *fileName) {
     // Create output directory
     const char* outDir = "area_plotswithThreshold";
-    
     // Check if directory exists, if not create it
     struct stat info;
     if (stat(outDir, &info) != 0) {
@@ -175,6 +174,8 @@ void processLowLightEvents(const char *fileName) {
     // Create master canvas
     TCanvas *masterCanvas = new TCanvas("MasterCanvas", "Combined PMT and SiPM Area Distributions", 3600, 3000);
     masterCanvas->Divide(5, 6, 0.005, 0.005);
+    // Disable automatic histogram titles
+gStyle->SetOptTitle(0);
 
     int layout[6][5] = {
         {-1,  -1,  20,  21, -1},
